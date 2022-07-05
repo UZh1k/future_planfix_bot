@@ -5,7 +5,6 @@ from aiogram.utils import executor
 
 import config
 
-
 bot = Bot(token=config.BOT_TOKEN)
 dp = Dispatcher(bot)
 
@@ -81,8 +80,28 @@ def filter_add_task(message: Message):
 
 
 async def on_startup(dispatcher: Dispatcher):
+    """
+    Выводит информацию о боте при его включении
+    :param dispatcher:
+    :return:
+    """
     print(await bot.me)
+    if config.BOT_TYPE == "WEBHOOK":
+        await bot.set_webhook(config.WEBHOOK_URL)
 
 
 if __name__ == "__main__":
-    executor.start_polling(dp, on_startup=on_startup, skip_updates=True, allowed_updates=AllowedUpdates.all())
+    if config.BOT_TYPE == "POLLING":
+        executor.start_polling(dispatcher=dp,
+                               on_startup=on_startup,
+                               skip_updates=True)
+    elif config.BOT_TYPE == "WEBHOOK":
+        print(config.WEBHOOK_URL)
+        print(config.WEBHOOK_PORT)
+        executor.start_webhook(dispatcher=dp,
+                               webhook_path=f"",
+                               on_startup=on_startup,
+                               skip_updates=True,
+                               host="0.0.0.0",
+                               port=config.WEBHOOK_PORT,
+                               )

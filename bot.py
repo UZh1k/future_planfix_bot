@@ -13,7 +13,7 @@ dp = Dispatcher(bot)
 @dp.message_handler(commands=['start', 'help'])
 async def send_welcome(message: Message):
     """
-    This handler will be called when user sends `/start` or `/help` command
+    Слушает /start и /help
     """
     print(message)
     await bot.send_message(message.chat.id, "hello")
@@ -21,6 +21,12 @@ async def send_welcome(message: Message):
 
 @dp.message_handler(lambda message: is_group_message(message), commands=config.TAGS)
 async def send_task(message: Message):
+    """
+    Слушает /mnt и /pnk
+    Отправляет список невыполненных задач по монтажу или настройке соответственно
+    :param message:
+    :return:
+    """
     print(message)
     await bot.send_message(message.chat.id, ' - Создание задач в телеграмме\n'
                                             ' - перенос задач в нужную папку\n'
@@ -30,6 +36,12 @@ async def send_task(message: Message):
 
 @dp.message_handler(lambda message: is_group_message(message), commands=map(lambda x: f"connect_{x}", config.TAGS))
 async def connect_task(message: Message):
+    """
+    Слушает /connect_mnt и /connect_pnk <id задачи из PlanFix>
+    Привязывает задачу к id группы из телеграмма
+    :param message:
+    :return:
+    """
     if len(message.text.split()) == 1:
         await bot.send_message(message.chat.id,
                                f"Используйте формат {message.text} <id задачи из PlanFix>")
@@ -40,14 +52,28 @@ async def connect_task(message: Message):
 
 @dp.message_handler(lambda message: is_group_message(message) and filter_add_task(message))
 async def add_task(message: Message):
+    """
+    Слушает #настройка и #монтаж \n <список задач, каждая с новой строки>
+    Добавляет задачи из группы по соответсвующему тэгу
+    :param message:
+    :return:
+    """
     await bot.send_message(message.chat.id, 'Добавили задачи')
 
 
 def is_group_message(message: Message) -> bool:
+    """
+    :param message:
+    :return: True, если сообщение пришло из группы
+    """
     return message.chat.type == 'group'
 
 
 def filter_add_task(message: Message):
+    """
+    :param message:
+    :return: True, если сообщение соответствует начинается на тэг
+    """
     for tag in config.TAGS_RU:
         if message.text.lower().startswith(f"#{tag}"):
             return True

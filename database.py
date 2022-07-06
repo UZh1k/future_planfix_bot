@@ -1,4 +1,6 @@
 import config
+import asyncio
+import api
 
 
 def create_table_if_not_exists():
@@ -24,7 +26,7 @@ def get_all_rows():
     return config.cursor.fetchall()
 
 
-def connect_chat_to_task(chat_id, task_id, tag) -> bool:
+async def connect_chat_to_task(chat_id, task_id, tag) -> bool:
     """
     Записывает в бд связь между id чата и id задачи из planfix
     :param chat_id:
@@ -32,13 +34,17 @@ def connect_chat_to_task(chat_id, task_id, tag) -> bool:
     :param tag:
     :return:
     """
-    sql_command = f"UPDATE chat_to_task SET ext_id='{task_id}' WHERE chat_id='{chat_id}' and type='{tag}';" \
-                  f"INSERT INTO chat_to_task (chat_id, ext_id, type) " \
-                  f"SELECT '{chat_id}', '{task_id}', '{tag}' " \
-                  f"WHERE NOT EXISTS (SELECT 1 FROM chat_to_task WHERE chat_id='{chat_id}' and type='{tag}');"
-    config.cursor.execute(sql_command)
-    config.connect.commit()
-    return True
+    int_id = await api.get_int_id(task_id)
+    if int_id:
+        sql_command = f"UPDATE chat_to_task SET ext_id='{task_id}', int_id='{int_id}' WHERE chat_id='{chat_id}' and type='{tag}';" \
+                      f"INSERT INTO chat_to_task (chat_id, ext_id, int_id, type) " \
+                      f"SELECT '{chat_id}', '{task_id}', '{int_id}', '{tag}' " \
+                      f"WHERE NOT EXISTS (SELECT 1 FROM chat_to_task WHERE chat_id='{chat_id}' and type='{tag}');"
+        config.cursor.execute(sql_command)
+        config.connect.commit()
+        return True
+    else:
+        return False
 
 
 def get_task_id(chat_id, tag):

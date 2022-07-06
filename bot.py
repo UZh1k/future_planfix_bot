@@ -1,15 +1,14 @@
-from typing import List, Optional
-
 from aiogram import Bot
 from aiogram.dispatcher import Dispatcher
 from aiogram.types import ParseMode, Message
 from aiogram.utils import executor
 
+import api
 import config
 import database
 import services
 
-dsn = f'dbname={config.DB_NAME} user={config.DB_USER} password={config.DB_PASSWORD} host={config.DB_HOST}'
+
 bot = Bot(token=config.BOT_TOKEN)
 dp = Dispatcher(bot)
 
@@ -37,14 +36,14 @@ async def show_task(message: Message):
     """
     tag = services.get_tag_from_string(message.text, config.TAGS_RU)
     task_id = database.get_task_id(message.chat.id, config.TRANS_DICT_RU[tag])
-    await bot.send_message(message.chat.id, f'Ищем чеклист по задаче {task_id}\n'
-                                            '- Создание задач в телеграмме\n'
-                                            ' - перенос задач в нужную папку\n'
-                                            ' - Контроль над задачей\n'
-                                            '   - подпункт')
+    tasks = await api.get_check_list(task_id)
+    tasks_pretty = [f'{"    "*task[1]}- {task[0]}' for task in tasks]
+    text = "\n".join(tasks_pretty)
+    await bot.send_message(message.chat.id, text)
 
 
-@dp.message_handler(lambda message: services.is_group_message(message), commands=map(lambda x: f"connect_{x}", config.TAGS))
+@dp.message_handler(lambda message: services.is_group_message(message),
+                    commands=map(lambda x: f"connect_{x}", config.TAGS))
 async def connect_task(message: Message):
     """
     Слушает /connect_mount и /connect_tuning <id задачи из PlanFix>
@@ -59,9 +58,9 @@ async def connect_task(message: Message):
     else:
         task_id = splitted_message[-1]
         tag = services.get_tag_from_string(splitted_message[0], config.TAGS)
-        if database.connect_chat_to_task(chat_id=message.chat.id,
-                                         task_id=task_id,
-                                         tag=tag):
+        if await database.connect_chat_to_task(chat_id=message.chat.id,
+                                               task_id=task_id,
+                                               tag=tag):
             await bot.send_message(message.chat.id,
                                    f'Привязали группу к задаче #{config.TRANS_DICT[tag]}')
         else:
@@ -87,8 +86,13 @@ async def add_task(message: Message):
     if len(splitted_by_n) > 1:
         tasks.extend(splitted_by_n[1:])
     print(tasks)  # таски в листе отправляем в апи
-
-    await bot.send_message(message.chat.id, f'Добавили пункты для задачи #{config.TRANS_DICT[tag]} {task_id}')
+    every_thing_worked = True
+    for task in tasks:
+        every_thing_worked = every_thing_worked and await api.create_task(task_id, task)
+    if every_thing_worked:
+        await bot.send_message(message.chat.id, f'Добавили пункты для задачи #{config.TRANS_DICT[tag]} {task_id}')
+    else:
+        await bot.send_message(message.chat.id, f'Что-то пошло не так: не все пункты добавлены.')
 
 
 async def on_startup(dispatcher: Dispatcher):

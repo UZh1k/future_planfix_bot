@@ -19,7 +19,12 @@ async def send_welcome(message: Message):
     """
     Слушает /start и /help
     """
-    await bot.send_message(message.chat.id, "hello")
+    await bot.send_message(message.chat.id,
+                           "/start и /help - выводит список команд\n"
+                           "/mount и /tuning <список задач> сохраняет задачи для монтажа или настройки\n"
+                           "/connect_mount и /connect_tuning <id задачи из url> - соединяет чат с задачей монтажа "
+                           "или настройки\n"
+                           "#монтаж и #настройка - выводят невыполненные задачи по монтажу или настройки")
 
 
 @dp.message_handler(lambda message: services.is_group_message(message) and services.filter_show_task(message))

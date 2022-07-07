@@ -40,6 +40,6 @@ async def create_task(task_id, task) -> bool:
                                 cookies=secret.cookies, headers=secret.headers) as resp:
             try:
                 result = await resp.json()
-                return result['Result'] == 'success'
+                return result['TaskCheck']['ID']
             except KeyError:
                 return False

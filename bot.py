@@ -86,10 +86,25 @@ async def add_task(message: Message):
     if len(splitted_by_n) > 1:
         tasks.extend(splitted_by_n[1:])
     print(tasks)  # таски в листе отправляем в апи
-    every_thing_worked = True
+    everything_worked = True
+    nesting_ids = [task_id]
     for task in tasks:
-        every_thing_worked = every_thing_worked and await api.create_task(task_id, task)
-    if every_thing_worked:
+        print(f'"{task}" --> {task.split()[0].count(".")}')
+        nesting_lvl = task.split()[0].count(".")
+        if nesting_lvl+1 > len(nesting_ids):
+            everything_worked = False
+            break
+        elif nesting_lvl+1 < len(nesting_ids):
+            nesting_ids = nesting_ids[:nesting_lvl+1-len(nesting_ids)]  # remove useless for now parents
+
+        print(f'ID list: {nesting_ids} -- Current nesting lvl: {nesting_lvl}')
+
+        current_id = await api.create_task(nesting_ids[-1], task) #task_id, task)
+        if current_id:
+            nesting_ids += current_id
+        everything_worked = everything_worked and current_id
+
+    if everything_worked:
         await bot.send_message(message.chat.id, f'Добавили пункты для задачи #{config.TRANS_DICT[tag]} {task_id}')
     else:
         await bot.send_message(message.chat.id, f'Что-то пошло не так: не все пункты добавлены.')

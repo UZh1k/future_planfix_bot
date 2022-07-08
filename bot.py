@@ -87,22 +87,49 @@ async def add_task(message: Message):
         tasks.extend(splitted_by_n[1:])
     print(tasks)  # таски в листе отправляем в апи
     everything_worked = True
+    wrong_format = False
     nesting_ids = [task_id]
-    for task in tasks:
-        print(f'"{task}" --> {task.split()[0].count(".")}')
-        nesting_lvl = task.split()[0].count(".")
-        if nesting_lvl+1 > len(nesting_ids):
-            everything_worked = False
-            break
-        elif nesting_lvl+1 < len(nesting_ids):
-            nesting_ids = nesting_ids[:nesting_lvl+1-len(nesting_ids)]  # remove useless for now parents
 
-        print(f'ID list: {nesting_ids} -- Current nesting lvl: {nesting_lvl}')
+    for i in range(len(tasks)):
+        tasks[i] = [tasks[i].split()[0], ''.join(tasks[i].split()[1:])]  # sample_task == ['...', 'SAMPLE TEXT']
+        if tasks[i][0] != '.'*len(tasks[i][0]):
+            tasks[i] = [0, tasks[i][0]]  # sample_0lvl_task == [0, 'SAMPLE 0 lvl TEXT']
+        else:
+            tasks[i][0] = tasks[i][0].count(".")  # sample_task == [3, 'SAMPLE TEXT']
 
-        current_id = await api.create_task(nesting_ids[-1], task) #task_id, task)
-        if current_id:
-            nesting_ids += current_id
-        everything_worked = everything_worked and current_id
+    if tasks[0][0] > 0:
+        everything_worked = False
+        await bot.send_message(message.chat.id, f'Некорректный уровень вложенности первого пункта: первый пункт не должен быть вложенным.')
+
+    if len(tasks) > 1:
+        for i in range(len(tasks)-1):
+            # CASE "< 0":  |... 2    |     CASE "== 0":  |. 2    |     CASE "== 1": |. 2    |     CASE "> 1":  |. 2    |
+            #              |. 3      |                   |. 3    |                  |.. 3   |                  |... 3  |
+            if (tasks[i+1][0] - tasks[i][0]) > 1:
+                everything_worked = False
+                await bot.send_message(message.chat.id, f'Некорректный уровень вложенности {i+2} пункта: {i+2} пункт должен быть вложен не больше, чем на 1 уровень относительно {i+1} пункта.')
+
+    if everything_worked:
+        for task in tasks:
+            print(tasks)
+            if len(task) != 2:
+                everything_worked = False
+                break
+
+            nesting_lvl = task[0]
+            task = task[1]
+            if nesting_lvl+1 > len(nesting_ids):
+                everything_worked = False
+                break
+            elif nesting_lvl+1 < len(nesting_ids):
+                nesting_ids = nesting_ids[:nesting_lvl+1-len(nesting_ids)]  # remove useless for now parents
+
+            print(f'ADD task:    ID list: {nesting_ids} -- Current nesting lvl: {nesting_lvl} -- Task text: {task}')
+
+            current_id = await api.create_task(nesting_ids[-1], task)
+            if current_id:
+                nesting_ids += [current_id]
+            everything_worked = everything_worked and current_id
 
     if everything_worked:
         await bot.send_message(message.chat.id, f'Добавили пункты для задачи #{config.TRANS_DICT[tag]} {task_id}')

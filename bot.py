@@ -45,6 +45,7 @@ async def show_task(message: Message):
     tag = services.get_tag_from_string(message.text, config.TAGS_RU)
     task_id = database.get_task_id(message.chat.id, config.TRANS_DICT_RU[tag])
     tasks = await api.get_check_list(task_id)
+    print(tasks)
     tasks_pretty = [f'{"    " * task[1]}- {task[0]}' for task in tasks]
     text = "\n".join(tasks_pretty)
     await bot.send_message(message.chat.id, text)

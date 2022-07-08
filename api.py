@@ -26,7 +26,7 @@ async def get_check_list(task_id) -> List[str]:
             result = await resp.json()
             tasks = []
             for point in result['CheckList']:
-                if point['Status'] == 2:
+                if point['Status'] != 3:
                     tasks.append((point['Title'], len(point['TreePath'].split(',')) - 2))
             return tasks
 

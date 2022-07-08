@@ -8,7 +8,6 @@ import config
 import database
 import services
 
-
 bot = Bot(token=config.BOT_TOKEN)
 dp = Dispatcher(bot)
 
@@ -46,7 +45,7 @@ async def show_task(message: Message):
     tag = services.get_tag_from_string(message.text, config.TAGS_RU)
     task_id = database.get_task_id(message.chat.id, config.TRANS_DICT_RU[tag])
     tasks = await api.get_check_list(task_id)
-    tasks_pretty = [f'{"    "*task[1]}- {task[0]}' for task in tasks]
+    tasks_pretty = [f'{"    " * task[1]}- {task[0]}' for task in tasks]
     text = "\n".join(tasks_pretty)
     await bot.send_message(message.chat.id, text)
 
@@ -88,63 +87,63 @@ async def add_task(message: Message):
     :return:
     """
     if await user_is_owner(message):
-      splitted_by_n = message.text.split('\n')
-      first_string_splitted = splitted_by_n[0].split()
-      tag = services.get_tag_from_string(first_string_splitted[0], config.TAGS)
-      task_id = database.get_task_id(message.chat.id, tag)
+        splitted_by_n = message.text.split('\n')
+        first_string_splitted = splitted_by_n[0].split()
+        tag = services.get_tag_from_string(first_string_splitted[0], config.TAGS)
+        task_id = database.get_task_id(message.chat.id, tag)
 
-      tasks = [" ".join(first_string_splitted[1:])] if len(first_string_splitted) > 1 else []
-      if len(splitted_by_n) > 1:
-          tasks.extend(splitted_by_n[1:])
-      print(tasks)  # таски в листе отправляем в апи
-      everything_worked = True
-      nesting_ids = [task_id]
+        tasks = [" ".join(first_string_splitted[1:])] if len(first_string_splitted) > 1 else []
+        if len(splitted_by_n) > 1:
+            tasks.extend(splitted_by_n[1:])
+        print(tasks)  # таски в листе отправляем в апи
+        everything_worked = True
+        nesting_ids = [task_id]
 
-      for i in range(len(tasks)):
-          tasks[i] = [tasks[i].split()[0], ''.join(tasks[i].split()[1:])]  # sample_task == ['...', 'SAMPLE TEXT']
-          if tasks[i][0] != '.'*len(tasks[i][0]):
-              tasks[i] = [0, tasks[i][0]]  # sample_0lvl_task == [0, 'SAMPLE 0 lvl TEXT']
-          else:
-              tasks[i][0] = tasks[i][0].count(".")  # sample_task == [3, 'SAMPLE TEXT']
+        for i in range(len(tasks)):
+            dot_count = tasks[i].split()[0].count('.')
+            tasks[i] = [dot_count, tasks[i].replace('.', '', dot_count)]  # sample_task == [3, 'SAMPLE TEXT']
+        print(tasks)
 
-      if tasks[0][0] > 0:
-          everything_worked = False
-          await bot.send_message(message.chat.id, f'Некорректный уровень вложенности первого пункта: первый пункт не должен быть вложенным.')
+        if tasks[0][0] > 0:
+            everything_worked = False
+            await bot.send_message(message.chat.id,
+                                   f'Некорректный уровень вложенности первого пункта: первый пункт не должен быть вложенным.')
 
-      if len(tasks) > 1:
-          for i in range(len(tasks)-1):
-              # CASE "< 0":  |... 2    |     CASE "== 0":  |. 2    |     CASE "== 1": |. 2    |     CASE "> 1":  |. 2    |
-              #              |. 3      |                   |. 3    |                  |.. 3   |                  |... 3  |
-              if (tasks[i+1][0] - tasks[i][0]) > 1:
-                  everything_worked = False
-                  await bot.send_message(message.chat.id, f'Некорректный уровень вложенности {i+2} пункта: {i+2} пункт должен быть вложен не больше, чем на 1 уровень относительно {i+1} пункта.')
+        if len(tasks) > 1:
+            for i in range(len(tasks) - 1):
+                # CASE "< 0":  |... 2    |     CASE "== 0":  |. 2    |     CASE "== 1": |. 2    |     CASE "> 1":  |. 2    |
+                #              |. 3      |                   |. 3    |                  |.. 3   |                  |... 3  |
+                if (tasks[i + 1][0] - tasks[i][0]) > 1:
+                    everything_worked = False
+                    await bot.send_message(message.chat.id,
+                                           f'Некорректный уровень вложенности {i + 2} пункта: {i + 2} пункт должен быть вложен не больше, чем на 1 уровень относительно {i + 1} пункта.')
 
-      if everything_worked:
-          for task in tasks:
-              print(tasks)
-              if len(task) != 2:
-                  everything_worked = False
-                  break
+        if everything_worked:
+            for task in tasks:
+                print(tasks)
+                if len(task) != 2:
+                    everything_worked = False
+                    break
 
-              nesting_lvl = task[0]
-              task = task[1]
-              if nesting_lvl+1 > len(nesting_ids):
-                  everything_worked = False
-                  break
-              elif nesting_lvl+1 < len(nesting_ids):
-                  nesting_ids = nesting_ids[:nesting_lvl+1-len(nesting_ids)]  # remove useless for now parents
+                nesting_lvl = task[0]
+                task = task[1]
+                if nesting_lvl + 1 > len(nesting_ids):
+                    everything_worked = False
+                    break
+                elif nesting_lvl + 1 < len(nesting_ids):
+                    nesting_ids = nesting_ids[:nesting_lvl + 1 - len(nesting_ids)]  # remove useless for now parents
 
-              print(f'ADD task:    ID list: {nesting_ids} -- Current nesting lvl: {nesting_lvl} -- Task text: {task}')
+                print(f'ADD task:    ID list: {nesting_ids} -- Current nesting lvl: {nesting_lvl} -- Task text: {task}')
 
-              current_id = await api.create_task(nesting_ids[-1], task)
-              if current_id:
-                  nesting_ids += [current_id]
-              everything_worked = everything_worked and current_id
+                current_id = await api.create_task(nesting_ids[-1], task)
+                if current_id:
+                    nesting_ids += [current_id]
+                everything_worked = everything_worked and current_id
 
-      if everything_worked:
-          await bot.send_message(message.chat.id, f'Добавили пункты для задачи #{config.TRANS_DICT[tag]} {task_id}')
-      else:
-          await bot.send_message(message.chat.id, f'Что-то пошло не так: не все пункты добавлены.')
+        if everything_worked:
+            await bot.send_message(message.chat.id, f'Добавили пункты для задачи #{config.TRANS_DICT[tag]} {task_id}')
+        else:
+            await bot.send_message(message.chat.id, f'Что-то пошло не так: не все пункты добавлены.')
 
 
 async def on_startup(dispatcher: Dispatcher):

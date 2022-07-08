@@ -32,3 +32,4 @@ def get_tag_from_string(string: str, tags: List[str] = config.TAGS) -> Optional[
         if tag in string:
             return tag
     return None
+

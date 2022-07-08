@@ -4,6 +4,8 @@ import psycopg2
 
 load_dotenv()
 
+OWNER_IDS = os.environ.get("OWNER_IDS").split(',')
+
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 PF_TOKEN = os.environ.get("PF_TOKEN")
 

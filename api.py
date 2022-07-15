@@ -29,7 +29,7 @@ async def get_check_list(task_id) -> List[str]:
             tasks = []
             for point in result['CheckList']:
                 if point['Status'] in [1, 2]:
-                    tasks.append((point['Description'], len(point['TreePath'].split(',')) - 2))
+                    tasks.append((point['Description'] if point['Description'] else point['Title'], len(point['TreePath'].split(',')) - 2))
             return tasks
 
 

@@ -53,7 +53,10 @@ async def show_task(message: Message):
             task_pretty += f" ({', '.join(task['workers'])})"
         tasks_pretty.append(task_pretty)
     text = "\n".join(tasks_pretty)
-    await bot.send_message(message.chat.id, text)
+    if text:
+        await bot.send_message(message.chat.id, text)
+    else:
+        await bot.send_message(message.chat.id, "Все задачи выполнены")
 
 
 @dp.message_handler(lambda message: services.is_group_message(message),

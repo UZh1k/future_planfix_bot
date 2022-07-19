@@ -29,7 +29,9 @@ async def get_check_list(task_id) -> List[str]:
             tasks = []
             for point in result['CheckList']:
                 if point['Status'] in [1, 2]:
-                    tasks.append((point['Description'] if point['Description'] else point['Title'], len(point['TreePath'].split(',')) - 2))
+                    tasks.append({"name": point['Description'] if point['Description'] else point['Title'],
+                                  "nesting_level": len(point['TreePath'].split(',')) - 2,
+                                  "workers": [worker['Name'] for worker in point['WorkersList']]})
             return tasks
 
 
@@ -45,3 +47,6 @@ async def create_task(task_id, task) -> bool:
                 return result['TaskCheck']['ID']
             except KeyError:
                 return False
+
+if __name__ == "__main__":
+    print(asyncio.run(get_check_list(845973)))

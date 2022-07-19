@@ -46,7 +46,12 @@ async def show_task(message: Message):
     task_id = database.get_task_id(message.chat.id, config.TRANS_DICT_RU[tag])
     tasks = await api.get_check_list(task_id)
     print(tasks)
-    tasks_pretty = [f'{"    " * task[1]}- {task[0]}' for task in tasks]
+    tasks_pretty = []
+    for task in tasks:
+        task_pretty = f'{"    " * task["nesting_level"]}- {task["name"]}'
+        if task['workers']:
+            task_pretty += f" ({', '.join(task['workers'])})"
+        tasks_pretty.append(task_pretty)
     text = "\n".join(tasks_pretty)
     await bot.send_message(message.chat.id, text)
 

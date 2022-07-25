@@ -2,6 +2,12 @@ import config
 import asyncio
 import api
 
+connect = psycopg2.connect(DB_URL)
+cursor = connect.cursor()
+
+
+
+
 
 def create_table_if_not_exists():
     """
@@ -13,8 +19,8 @@ def create_table_if_not_exists():
                   "ext_id varchar(255), " \
                   "int_id varchar(255), " \
                   "type varchar(255));"
-    config.cursor.execute(sql_command)
-    config.connect.commit()
+    cursor.execute(sql_command)
+    connect.commit()
 
 
 def get_all_rows():
@@ -22,8 +28,8 @@ def get_all_rows():
     Выводит все строки из бд. Нужно для тестов
     :return:
     """
-    config.cursor.execute(f"SELECT * FROM chat_to_task;")
-    return config.cursor.fetchall()
+    cursor.execute(f"SELECT * FROM chat_to_task;")
+    return cursor.fetchall()
 
 
 async def connect_chat_to_task(chat_id, task_id, tag) -> bool:
@@ -40,8 +46,8 @@ async def connect_chat_to_task(chat_id, task_id, tag) -> bool:
                       f"INSERT INTO chat_to_task (chat_id, ext_id, int_id, type) " \
                       f"SELECT '{chat_id}', '{ext_id}', '{task_id}', '{tag}' " \
                       f"WHERE NOT EXISTS (SELECT 1 FROM chat_to_task WHERE chat_id='{chat_id}' and type='{tag}');"
-        config.cursor.execute(sql_command)
-        config.connect.commit()
+        cursor.execute(sql_command)
+        connect.commit()
         return True
     else:
         return False
@@ -57,5 +63,5 @@ def get_task_id(chat_id, tag):
     sql_command = f"SELECT ext_id " \
                   f"FROM chat_to_task " \
                   f"WHERE chat_id='{chat_id}' and type='{tag}'"
-    config.cursor.execute(sql_command)
-    return config.cursor.fetchone()[0]
+    cursor.execute(sql_command)
+    return cursor.fetchone()[0]

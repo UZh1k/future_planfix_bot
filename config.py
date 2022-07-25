@@ -31,6 +31,3 @@ TAGS = (MONTAGE, SETTING)
 TAGS_RU = (MONTAGE_RU, SETTING_RU)
 TRANS_DICT = dict(zip(TAGS, TAGS_RU))
 TRANS_DICT_RU = dict(zip(TAGS_RU, TAGS))
-
-connect = psycopg2.connect(DB_URL)
-cursor = connect.cursor()

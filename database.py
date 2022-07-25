@@ -1,14 +1,25 @@
+import psycopg2
+
 import config
 import asyncio
 import api
 
-connect = psycopg2.connect(DB_URL)
+connect = psycopg2.connect(config.DB_URL)
 cursor = connect.cursor()
 
 
+def db_update(func):
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except psycopg2.InterfaceError:
+            connect = psycopg2.connect(config.DB_URL)
+            cursor = connect.cursor()
+            return func(*args, **kwargs)
+    return wrapper
 
 
-
+@db_update
 def create_table_if_not_exists():
     """
     Создает таблицу, если она еще не была создана
@@ -23,6 +34,7 @@ def create_table_if_not_exists():
     connect.commit()
 
 
+@db_update
 def get_all_rows():
     """
     Выводит все строки из бд. Нужно для тестов
@@ -32,6 +44,7 @@ def get_all_rows():
     return cursor.fetchall()
 
 
+@db_update
 async def connect_chat_to_task(chat_id, task_id, tag) -> bool:
     """
     Записывает в бд связь между id чата и id задачи из planfix
@@ -53,6 +66,7 @@ async def connect_chat_to_task(chat_id, task_id, tag) -> bool:
         return False
 
 
+@db_update
 def get_task_id(chat_id, tag):
     """
     Возвращает task_id по chat_id, tag из бд

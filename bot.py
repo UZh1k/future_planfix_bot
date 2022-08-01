@@ -10,6 +10,7 @@ import services
 
 bot = Bot(token=config.BOT_TOKEN)
 dp = Dispatcher(bot)
+postgres = database.PostgesOperations()
 
 
 async def user_is_owner(message: Message):
@@ -42,10 +43,10 @@ async def show_task(message: Message):
     :param message:
     :return:
     """
+    print(message)
     tag = services.get_tag_from_string(message.text, config.TAGS_RU)
-    task_id = database.get_task_id(message.chat.id, config.TRANS_DICT_RU[tag])
+    task_id = postgres.get_task_id(message.chat.id, config.TRANS_DICT_RU[tag])
     tasks = await api.get_check_list(task_id)
-    print(tasks)
     tasks_pretty = []
     for task in tasks:
         task_pretty = f'{"    " * task["nesting_level"]}- {task["name"]}'
@@ -54,7 +55,8 @@ async def show_task(message: Message):
         tasks_pretty.append(task_pretty)
     text = "\n".join(tasks_pretty)
     if text:
-        await bot.send_message(message.chat.id, text)
+        for message_slices in services.split_text_by_chunks(text):
+            await bot.send_message(message.chat.id, message_slices)
     else:
         await bot.send_message(message.chat.id, "Все задачи выполнены")
 
@@ -68,6 +70,7 @@ async def connect_task(message: Message):
     :param message:
     :return:
     """
+    print(message)
     if await user_is_owner(message):
         splitted_message = message.text.split()
         if len(splitted_message) == 1 or len(splitted_message) > 2 or not splitted_message[1].isdigit():
@@ -76,7 +79,7 @@ async def connect_task(message: Message):
         else:
             task_id = splitted_message[-1]
             tag = services.get_tag_from_string(splitted_message[0], config.TAGS)
-            if await database.connect_chat_to_task(chat_id=message.chat.id,
+            if await postgres.connect_chat_to_task(chat_id=message.chat.id,
                                                    task_id=task_id,
                                                    tag=tag):
                 await bot.send_message(message.chat.id,
@@ -95,23 +98,22 @@ async def add_task(message: Message):
     :param message:
     :return:
     """
+    print(message)
     if await user_is_owner(message):
         splitted_by_n = message.text.split('\n')
         first_string_splitted = splitted_by_n[0].split()
         tag = services.get_tag_from_string(first_string_splitted[0], config.TAGS)
-        task_id = database.get_task_id(message.chat.id, tag)
+        task_id = postgres.get_task_id(message.chat.id, tag)
 
         tasks = [" ".join(first_string_splitted[1:])] if len(first_string_splitted) > 1 else []
         if len(splitted_by_n) > 1:
             tasks.extend(splitted_by_n[1:])
-        print(tasks)  # таски в листе отправляем в апи
         everything_worked = True
         nesting_ids = [task_id]
 
         for i in range(len(tasks)):
             dot_count = tasks[i].split()[0].count('.')
             tasks[i] = [dot_count, tasks[i].replace('.', '', dot_count)]  # sample_task == [3, 'SAMPLE TEXT']
-        print(tasks)
 
         if tasks[0][0] > 0:
             everything_worked = False
@@ -129,7 +131,6 @@ async def add_task(message: Message):
 
         if everything_worked:
             for task in tasks:
-                print(tasks)
                 if len(task) != 2:
                     everything_worked = False
                     break
@@ -141,8 +142,6 @@ async def add_task(message: Message):
                     break
                 elif nesting_lvl + 1 < len(nesting_ids):
                     nesting_ids = nesting_ids[:nesting_lvl + 1 - len(nesting_ids)]  # remove useless for now parents
-
-                print(f'ADD task:    ID list: {nesting_ids} -- Current nesting lvl: {nesting_lvl} -- Task text: {task}')
 
                 current_id = await api.create_task(nesting_ids[-1], task)
                 if current_id:
@@ -161,7 +160,7 @@ async def on_startup(dispatcher: Dispatcher):
     :param dispatcher:
     :return:
     """
-    database.create_table_if_not_exists()
+    postgres.create_table_if_not_exists()
     print(await bot.me)
     if config.BOT_TYPE == "WEBHOOK":
         await bot.set_webhook(config.WEBHOOK_URL)

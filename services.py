@@ -33,3 +33,21 @@ def get_tag_from_string(string: str, tags: List[str] = config.TAGS) -> Optional[
             return tag
     return None
 
+
+def split_text_by_chunks(st: str) -> List[str]:
+    """
+    Разделяет вывод бота на чанки, чтобы не было ошибки о слишком длинном сообщении
+    :param st: Исходный текст
+    :return: Массив строк, разделенный на чанки
+    """
+    if len(st) > 4000:
+        texts = []
+        text_len = len(st)
+        count = text_len // 4000 + 1
+
+        for i in range(count):
+            texts.append(st[4000 * i: 4000 * (i + 1)])
+
+        return texts
+    else:
+        return [st]

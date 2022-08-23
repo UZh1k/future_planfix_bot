@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, Dict
 
 import aiohttp
 import asyncio
@@ -51,19 +51,17 @@ async def create_task(task_id, task) -> bool:
                 return False
 
 
-async def get_all_users(task_id) -> List[str]:
+async def get_user(name) -> Dict | bool:
     async with aiohttp.ClientSession() as session:
-        async with session.post(url=f"{config.ENDPOINT}/ajax/", data=secret.data['get_all_users'].format(task_id),
-                                cookies=secret.cookies_for_all_users, headers=secret.headers_for_all_users) as resp:
+        async with session.post(url=f"{config.ENDPOINT}/ajax/", data=secret.data['get_all_users'],
+                                cookies=secret.cookies, headers=secret.headers) as resp:
             result = await resp.json()
-            tasks = []
-            for point in result['CheckList']:
-                if point['Status'] in [1, 2]:
-                    tree_path_splitted = point['TreePath'].split(',')
-                    nesting_level = len(tree_path_splitted[tree_path_splitted.index(task_id)+1:])
-                    tasks.append({"name": point['Description'] if point['Description'] else point['Title'],
-                                  "nesting_level": nesting_level,
-                                  "workers": [worker['Name'] for worker in point['WorkersList']]})
-            return tasks
+            users = []
+            for usr in result['UserList']:
+                if name.lower() in usr['FIO'].lower():
+                    users.append({'FIO': usr['FIO'], 'LoginID': usr['LoginID']})
 
-response = requests.post('https://smft.planfix.ru/ajax/', cookies=cookies, headers=headers, data=data)
+            if len(users) == 1:
+                return users[0]
+            else:
+                return False

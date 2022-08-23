@@ -21,7 +21,7 @@ async def user_is_owner(message: Message):
         return False
 
 
-@dp.message_handler(commands=['start', 'help'])
+@dp.message_handler(lambda message: services.is_group_message(message), commands=['start', 'help'])
 async def send_welcome(message: Message):
     """
     Слушает /start и /help
@@ -152,6 +152,28 @@ async def add_task(message: Message):
             await bot.send_message(message.chat.id, f'Добавили пункты для задачи #{config.TRANS_DICT[tag]} {task_id}')
         else:
             await bot.send_message(message.chat.id, f'Что-то пошло не так: не все пункты добавлены.')
+
+
+@dp.message_handler(lambda message: services.is_private_message(message), commands=['start', 'help'])
+async def send_welcome(message: Message):
+    """
+    Слушает /start и /help
+    """
+    await bot.send_message(message.chat.id,
+                           "Введите Вашу фамилию (и имя при необходимости)")
+
+
+@dp.message_handler(lambda message: services.is_private_message(message))
+async def create_worker(message: Message):
+    print(message)
+    user_info = await api.get_user(message.text)
+    if user_info:
+        postgres.add_user(user_info["FIO"], user_info["LoginID"], str(message.chat.id))
+        await bot.send_message(message.chat.id, f'Мы вас нашли!\n\n'
+                                                f'ФИО: {user_info["FIO"]}\n'
+                                                f'ID Планфикса: {user_info["LoginID"]}')
+    else:
+        await bot.send_message(message.chat.id, f'Мы вас не нашли. Перепроверьте данные, добавьте имя или обратитесь к администратору')
 
 
 async def on_startup(dispatcher: Dispatcher):

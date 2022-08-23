@@ -1,4 +1,3 @@
-import psycopg2
 from sqlalchemy import create_engine, Table, Column, Integer, String, MetaData, Boolean, ForeignKey, literal, exists, \
     DateTime
 from sqlalchemy.sql import select
@@ -15,7 +14,7 @@ chat_to_task = Table('chat_to_task_test', metadata_obj,
                      Column('type', String(255))
                      )
 
-user = Table('user', metadata_obj,
+worker = Table('worker', metadata_obj,
              Column('id', Integer, primary_key=True),
              Column('name', String(255)),
              Column('login_id', String(255)),
@@ -27,6 +26,7 @@ attendance = Table('attendance', metadata_obj,
                    Column('arrived', Boolean),
                    Column('come', DateTime),
                    Column('user_id', ForeignKey('user.id')),
+                   Column('comment', String(255))
                    )
 
 
@@ -101,5 +101,5 @@ class PostgesOperations:
 
     @db_update
     def add_user(self, name, login_id, tg_id):
-        return
-
+        ins = worker.insert().values(name=name, login_id=login_id, tg_id=tg_id)
+        self.connect.execute(ins)

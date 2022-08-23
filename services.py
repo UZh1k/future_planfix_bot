@@ -13,6 +13,14 @@ def is_group_message(message: Message) -> bool:
     return message.chat.type == 'group'
 
 
+def is_private_message(message: Message) -> bool:
+    """
+    :param message:
+    :return: True, если сообщение пришло из группы
+    """
+    return message.chat.type == 'private'
+
+
 def filter_show_task(message: Message):
     """
     :param message:

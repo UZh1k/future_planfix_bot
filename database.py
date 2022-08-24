@@ -109,10 +109,10 @@ class PostgesOperations:
         self.connect.execute(ins)
 
     @db_update
-    def get_user_id_by_tg_id(self, tg_id: str) -> int | bool:
+    def get_user_by_tg_id(self, tg_id: str) -> int | bool:
         query = select(worker).where(worker.c.tg_id == tg_id)
         try:
-            return self.connect.execute(query).fetchone()._mapping[worker.c.id]
+            return self.connect.execute(query).fetchone()._mapping
         except AttributeError:
             return False
 

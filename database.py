@@ -1,5 +1,8 @@
+import datetime
+from typing import Optional
+
 from sqlalchemy import create_engine, Table, Column, Integer, String, MetaData, Boolean, ForeignKey, literal, exists, \
-    DateTime
+    DateTime, desc
 from sqlalchemy.sql import select
 
 import config
@@ -15,18 +18,19 @@ chat_to_task = Table('chat_to_task_test', metadata_obj,
                      )
 
 worker = Table('worker', metadata_obj,
-             Column('id', Integer, primary_key=True),
-             Column('name', String(255)),
-             Column('login_id', String(255)),
-             Column('tg_id', String(255))
-             )
+               Column('id', Integer, primary_key=True),
+               Column('name', String(255)),
+               Column('login_id', String(255)),
+               Column('tg_id', String(255))
+               )
 
 attendance = Table('attendance', metadata_obj,
                    Column('id', Integer, primary_key=True),
                    Column('arrived', Boolean),
-                   Column('come', DateTime),
-                   Column('user_id', ForeignKey('user.id')),
-                   Column('comment', String(255))
+                   Column('time', DateTime),
+                   Column('worker_id', ForeignKey('worker.id')),
+                   Column('comment', String(255)),
+                   Column('is_marked', Boolean, default=False)
                    )
 
 
@@ -64,7 +68,7 @@ class PostgesOperations:
         return self.connect.execute(select(chat_to_task))
 
     @db_update
-    async def connect_chat_to_task(self, chat_id, task_id, tag) -> bool:
+    async def connect_chat_to_task(self, chat_id: str, task_id: str, tag: str) -> bool:
         """
         Записывает в бд связь между id чата и id задачи из planfix
         :param chat_id:
@@ -103,3 +107,41 @@ class PostgesOperations:
     def add_user(self, name, login_id, tg_id):
         ins = worker.insert().values(name=name, login_id=login_id, tg_id=tg_id)
         self.connect.execute(ins)
+
+    @db_update
+    def get_user_id_by_tg_id(self, tg_id: str) -> int | bool:
+        query = select(worker).where(worker.c.tg_id == tg_id)
+        try:
+            return self.connect.execute(query).fetchone()._mapping[worker.c.id]
+        except AttributeError:
+            return False
+
+    @db_update
+    def add_attendance(self, user_id: int, time=datetime.datetime.now(), arrived: bool = True, comment: str = ''):
+        ins = attendance.insert().values(arrived=arrived, time=time, worker_id=user_id, comment=comment)
+        self.connect.execute(ins)
+
+    @db_update
+    def get_user_last_attendance(self, user_id: int) -> dict | bool:
+        """
+        Вывод вида
+        {'id': 1, 'arrived': True, 'time': datetime.datetime(2022, 8, 24, 11, 42, 16, 932650), 'worker_id': 1,
+        'comment': ''}
+        :param user_id:
+        :return:
+        """
+        query = select(attendance).where(
+            attendance.c.worker_id == user_id and attendance.c.arrived == True and attendance.c.is_marked == False) \
+            .order_by(desc('time'))
+        try:
+            return self.connect.execute(query).fetchone()._mapping
+        except AttributeError:
+            return False
+
+    @db_update
+    def mark_user_last_attendance(self, user_id: int, last_attendance_id: Optional[int] = None):
+        if not last_attendance_id:
+            last_attendance = self.get_user_last_attendance(user_id)
+            last_attendance_id = last_attendance['id']
+        upd = attendance.update().values(is_marked=True).where(attendance.c.id == last_attendance_id)
+        self.connect.execute(upd)

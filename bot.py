@@ -1,3 +1,5 @@
+import datetime
+
 from aiogram import Bot
 from aiogram.dispatcher import Dispatcher
 from aiogram.types import ParseMode, Message
@@ -173,7 +175,32 @@ async def create_worker(message: Message):
                                                 f'ФИО: {user_info["FIO"]}\n'
                                                 f'ID Планфикса: {user_info["LoginID"]}')
     else:
-        await bot.send_message(message.chat.id, f'Мы вас не нашли. Перепроверьте данные, добавьте имя или обратитесь к администратору')
+        await bot.send_message(message.chat.id,
+                               f'Мы вас не нашли. Перепроверьте данные, добавьте имя или обратитесь к администратору')
+
+
+@dp.message_handler(lambda message: services.is_group_message(message) and (
+        "прибыл" in message.text.lower() or "убыл" in message.text.lower()))
+async def add_analytics(message: Message):
+    print(message)
+    user_id = postgres.get_user_by_tg_id(message.from_user.id)
+    parsed_message = services.parse_attendance_message(message.text)
+    if parsed_message['arrived'] == parsed_message['departed'] == True:
+        postgres.add_attendance(user_id=user_id, arrived=True, time=parsed_message['time'],
+                                comment=parsed_message['comment'], is_marked=True)
+        postgres.add_attendance(user_id=user_id, arrived=False,
+                                time=parsed_message['time'] + datetime.timedelta(minutes=5),
+                                comment=parsed_message['comment'], is_marked=True)
+        # todo api func
+    elif parsed_message['arrived']:
+        postgres.add_attendance(user_id=user_id, arrived=True, time=parsed_message['time'],
+                                comment=parsed_message['comment'])
+    elif parsed_message['departed']:
+        postgres.add_attendance(user_id=user_id, arrived=False, time=parsed_message['time'],
+                                comment=parsed_message['comment'], is_marked=True)
+
+
+    # "Неверный формат сообщения, пожалуйста, введите его в формате:\nприбыл *объект* *время (опционально)*")
 
 
 async def on_startup(dispatcher: Dispatcher):

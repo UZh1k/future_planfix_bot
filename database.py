@@ -117,8 +117,10 @@ class PostgesOperations:
             return False
 
     @db_update
-    def add_attendance(self, user_id: int, time=datetime.datetime.now(), arrived: bool = True, comment: str = ''):
-        ins = attendance.insert().values(arrived=arrived, time=time, worker_id=user_id, comment=comment)
+    def add_attendance(self, user_id: int, time=datetime.datetime.now(), arrived: bool = True, comment: str = '',
+                       is_marked: bool = False):
+        ins = attendance.insert().values(arrived=arrived, time=time, worker_id=user_id, comment=comment,
+                                         is_marked=is_marked)
         self.connect.execute(ins)
 
     @db_update

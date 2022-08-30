@@ -1,4 +1,6 @@
+import datetime
 from typing import List, Optional
+import re
 
 from aiogram.types import Message
 
@@ -59,3 +61,28 @@ def split_text_by_chunks(st: str) -> List[str]:
         return texts
     else:
         return [st]
+
+
+def parse_time(arrive_time: str) -> datetime.datetime:
+    if arrive_time != '':
+        hours, minutes = map(re.split(':. ', arrive_time))
+        return datetime.datetime.now().replace(hour=hours, minute=minutes)
+    return datetime.datetime.now()
+
+
+def parse_attendance_message(text: str) -> dict:
+    arrive_time = re.search("\d{1,2}[:.]{0,1}\d{1,2}", text)
+    if not arrive_time:
+        arrive_time = ''
+    else:
+        arrive_time = arrive_time.group(0)
+    add_worker = "+1" in text
+    all_without_comment = ['+1', arrive_time, config.ARRIVED, config.DEPARTED, ' ', '/']
+    comment = text.lower()
+    for deleter in all_without_comment:
+        comment = comment.replace(deleter, '')
+    comment = comment.upper()
+
+    result = {'time': parse_time(arrive_time), 'comment': comment, 'add_worker': add_worker,
+              'arrived': config.ARRIVED in text.lower(), 'departed': config.DEPARTED in text.lower()}
+    return result

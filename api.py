@@ -1,5 +1,7 @@
+import datetime
 from typing import Optional, List, Dict
 
+from urllib.parse import quote
 import aiohttp
 import asyncio
 import json
@@ -13,7 +15,7 @@ import config
 async def get_int_id(task_id) -> Optional[str]:
     async with aiohttp.ClientSession() as session:
         async with session.get(url=f"{config.ENDPOINT}/task/{task_id}", data=secret.data['get_int_id'].format(task_id),
-                                cookies=secret.cookies, headers=secret.headers) as resp:
+                               cookies=secret.cookies, headers=secret.headers) as resp:
             try:
                 result = await resp.text()
                 return re.search(r"Current\.task = '\d+';", result).group(0).split('\'')[1]
@@ -30,7 +32,7 @@ async def get_check_list(task_id) -> List[str]:
             for point in result['CheckList']:
                 if point['Status'] in [1, 2]:
                     tree_path_splitted = point['TreePath'].split(',')
-                    nesting_level = len(tree_path_splitted[tree_path_splitted.index(task_id)+1:])
+                    nesting_level = len(tree_path_splitted[tree_path_splitted.index(task_id) + 1:])
                     tasks.append({"name": point['Description'] if point['Description'] else point['Title'],
                                   "nesting_level": nesting_level,
                                   "workers": [worker['Name'] for worker in point['WorkersList']]})
@@ -64,4 +66,24 @@ async def get_user(name) -> Dict | bool:
             if len(users) == 1:
                 return users[0]
             else:
+                return False
+
+
+async def create_analytics(user_login_id: int, username: str, arrived_time=datetime.datetime.now(),
+                           departed_time=datetime.datetime.now() + datetime.timedelta(minutes=5),
+                           comment: str = '') -> bool:
+    async with aiohttp.ClientSession() as session:
+        data = secret.data_for_analytics
+        data['AttachedAnalitics'] = data['AttachedAnalitics'].format(arrived_time.strftime('%d-%m-%Y'),
+                                                                     arrived_time.strftime('%H:%M'),
+                                                                     departed_time.strftime('%H:%M'),
+                                                                     user_login_id, username)
+        data['ActionDescription'] = data['ActionDescription'].format(quote(comment))
+
+        async with session.post(url=f"{config.ENDPOINT}/ajax/", data=data,
+                                cookies=secret.cookies, headers=secret.headers) as resp:
+            try:
+                result = await resp.json()
+                return result['TaskCheck']['ID']
+            except KeyError:
                 return False

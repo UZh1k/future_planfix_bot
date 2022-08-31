@@ -69,21 +69,55 @@ async def get_user(name) -> Dict | bool:
                 return False
 
 
+async def create_comment(draft_id: int, session: aiohttp.ClientSession) -> bool:
+    data_for_create_comment = secret.data['create_comment']
+    data_for_create_comment['draftid'] = draft_id
+    async with session.post(url=f"{config.ENDPOINT}/ajax/", data=data_for_create_comment,
+                            cookies=secret.cookies, headers=secret.headers) as resp:
+        try:
+            result = await resp.json()
+            return result['Result'] == 'success'
+        except KeyError:
+            return False
+
+
+async def delete_draft(draft_id: int, session: aiohttp.ClientSession) -> bool:
+    data_for_delete_draft = secret.data['delete_draft']
+    data_for_delete_draft['draftid'] = draft_id
+    async with session.post(url=f"{config.ENDPOINT}/ajax/", data=data_for_delete_draft,
+                            cookies=secret.cookies, headers=secret.headers) as resp:
+        try:
+            result = await resp.json()
+            return result['Result'] == 'success'
+        except KeyError:
+            return False
+
+
 async def create_analytics(user_login_id: int, username: str, arrived_time=datetime.datetime.now(),
                            departed_time=datetime.datetime.now() + datetime.timedelta(minutes=5),
                            comment: str = '') -> bool:
     async with aiohttp.ClientSession() as session:
         data = secret.data_for_analytics
-        data['AttachedAnalitics'] = data['AttachedAnalitics'].format(arrived_time.strftime('%d-%m-%Y'),
-                                                                     arrived_time.strftime('%H:%M'),
-                                                                     departed_time.strftime('%H:%M'),
-                                                                     user_login_id, username)
+        date = arrived_time.strftime('%d-%m-%Y')
+        time_begin = arrived_time.strftime('%H:%M')
+        time_end = departed_time.strftime('%H:%M')
+        data['AttachedAnalitics'] = data['AttachedAnalitics'].substitute(date=date,
+                                                                         time_begin=time_begin,
+                                                                         time_end=time_end,
+                                                                         login_id=user_login_id,
+                                                                         username=username)
         data['ActionDescription'] = data['ActionDescription'].format(quote(comment))
 
         async with session.post(url=f"{config.ENDPOINT}/ajax/", data=data,
                                 cookies=secret.cookies, headers=secret.headers) as resp:
-            try:
-                result = await resp.json()
-                return result['TaskCheck']['ID']
-            except KeyError:
+
+            result = await resp.json()
+            if result['Result'] == 'fail':
                 return False
+
+            draft_id = result['DraftID']
+
+            save_comment = await create_comment(draft_id, session)
+            delete_old_draft = await delete_draft(draft_id, session)
+
+            return save_comment and delete_old_draft

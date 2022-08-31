@@ -6,6 +6,7 @@ import aiohttp
 import asyncio
 import json
 import re
+import copy
 
 import secret
 
@@ -41,7 +42,7 @@ async def get_check_list(task_id) -> List[str]:
 
 async def create_task(task_id, task) -> bool:
     async with aiohttp.ClientSession() as session:
-        data_for_create = secret.data['create_task']
+        data_for_create = copy.deepcopy(secret.data['create_task'])
         data_for_create['TaskParentID'] = str(task_id)
         data_for_create['TaskCheckDescription'] = task
         async with session.post(url=f"{config.ENDPOINT}/ajax/", data=data_for_create,
@@ -95,12 +96,15 @@ async def delete_draft(draft_id: int, session: aiohttp.ClientSession) -> bool:
 
 async def create_analytics(user_login_id: int, username: str, arrived_time=datetime.datetime.now(),
                            departed_time=datetime.datetime.now() + datetime.timedelta(minutes=5),
-                           comment: str = '') -> bool:
+                           comment: str = '', add_worker: bool = False) -> bool:
     async with aiohttp.ClientSession() as session:
-        data = secret.data_for_analytics
+        data = copy.deepcopy(secret.data_for_analytics)
         date = arrived_time.strftime('%d-%m-%Y')
         time_begin = arrived_time.strftime('%H:%M')
         time_end = departed_time.strftime('%H:%M')
+        if add_worker:
+            user_login_id = f"{user_login_id},{config.ADD_WORKER_ID}"
+            username += f",{config.ADD_WORKER_NAME}"
         data['AttachedAnalitics'] = data['AttachedAnalitics'].substitute(date=date,
                                                                          time_begin=time_begin,
                                                                          time_end=time_end,

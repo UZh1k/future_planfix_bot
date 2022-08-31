@@ -30,7 +30,8 @@ attendance = Table('attendance', metadata_obj,
                    Column('time', DateTime),
                    Column('worker_id', ForeignKey('worker.id')),
                    Column('comment', String(255)),
-                   Column('is_marked', Boolean, default=False)
+                   Column('is_marked', Boolean, default=False),
+                   Column('with_worker', Boolean, default=False)
                    )
 
 
@@ -109,7 +110,7 @@ class PostgesOperations:
         self.connect.execute(ins)
 
     @db_update
-    def get_user_by_tg_id(self, tg_id: str) -> int | bool:
+    def get_user_by_tg_id(self, tg_id: str) -> dict | bool:
         query = select(worker).where(worker.c.tg_id == tg_id)
         try:
             return self.connect.execute(query).fetchone()._mapping
@@ -118,9 +119,9 @@ class PostgesOperations:
 
     @db_update
     def add_attendance(self, user_id: int, time=datetime.datetime.now(), arrived: bool = True, comment: str = '',
-                       is_marked: bool = False):
+                       is_marked: bool = False, add_worker: bool = False):
         ins = attendance.insert().values(arrived=arrived, time=time, worker_id=user_id, comment=comment,
-                                         is_marked=is_marked)
+                                         is_marked=is_marked, with_worker=add_worker)
         self.connect.execute(ins)
 
     @db_update

@@ -183,22 +183,35 @@ async def create_worker(message: Message):
         "прибыл" in message.text.lower() or "убыл" in message.text.lower()))
 async def add_analytics(message: Message):
     print(message)
-    user_id = postgres.get_user_by_tg_id(message.from_user.id)
+    user = postgres.get_user_by_tg_id(str(message.from_user.id))
     parsed_message = services.parse_attendance_message(message.text)
+    print(parsed_message)
     if parsed_message['arrived'] == parsed_message['departed'] == True:
-        postgres.add_attendance(user_id=user_id, arrived=True, time=parsed_message['time'],
-                                comment=parsed_message['comment'], is_marked=True)
-        postgres.add_attendance(user_id=user_id, arrived=False,
+        postgres.add_attendance(user_id=user['id'], arrived=True, time=parsed_message['time'],
+                                comment=parsed_message['comment'], is_marked=True,
+                                add_worker=parsed_message['add_worker'])
+        postgres.add_attendance(user_id=user['id'], arrived=False,
                                 time=parsed_message['time'] + datetime.timedelta(minutes=5),
-                                comment=parsed_message['comment'], is_marked=True)
-        # todo api func
-    elif parsed_message['arrived']:
-        postgres.add_attendance(user_id=user_id, arrived=True, time=parsed_message['time'],
-                                comment=parsed_message['comment'])
-    elif parsed_message['departed']:
-        postgres.add_attendance(user_id=user_id, arrived=False, time=parsed_message['time'],
-                                comment=parsed_message['comment'], is_marked=True)
+                                comment=parsed_message['comment'], is_marked=True,
+                                add_worker=parsed_message['add_worker'])
 
+        res = await api.create_analytics(user_login_id=user['login_id'],
+                                         username=user['name'],
+                                         arrived_time=parsed_message['time'],
+                                         departed_time=parsed_message['time'] + datetime.timedelta(minutes=5),
+                                         comment=parsed_message['comment'],
+                                         add_worker=parsed_message['add_worker'])
+        await bot.send_message(message.chat.id, f'Операция прошла {res}')
+
+
+    elif parsed_message['arrived']:
+        postgres.add_attendance(user_id=user['id'], arrived=True, time=parsed_message['time'],
+                                comment=parsed_message['comment'],
+                                add_worker=parsed_message['add_worker'])
+    elif parsed_message['departed']:
+        postgres.add_attendance(user_id=user['id'], arrived=False, time=parsed_message['time'],
+                                comment=parsed_message['comment'], is_marked=True,
+                                add_worker=parsed_message['add_worker'])
 
     # "Неверный формат сообщения, пожалуйста, введите его в формате:\nприбыл *объект* *время (опционально)*")
 

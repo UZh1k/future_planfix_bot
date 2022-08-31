@@ -33,3 +33,6 @@ TRANS_DICT_RU = dict(zip(TAGS_RU, TAGS))
 
 ARRIVED = 'прибыл'
 DEPARTED = 'убыл'
+
+ADD_WORKER_ID = '88431'
+ADD_WORKER_NAME = 'Разнорабочий'

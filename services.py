@@ -65,7 +65,10 @@ def split_text_by_chunks(st: str) -> List[str]:
 
 def parse_time(arrive_time: str) -> datetime.datetime:
     if arrive_time != '':
-        hours, minutes = map(re.split(':. ', arrive_time))
+        if len(arrive_time) == 4 and arrive_time.isdigit():
+            hours, minutes = arrive_time[:2], arrive_time[2:]
+        else:
+            hours, minutes = map(re.split(':. ', arrive_time))
         return datetime.datetime.now().replace(hour=hours, minute=minutes)
     return datetime.datetime.now()
 

@@ -88,4 +88,12 @@ def parse_attendance_message(text: str) -> dict:
 
     result = {'time': parse_time(arrive_time), 'comment': comment, 'add_worker': add_worker,
               'arrived': config.ARRIVED in text.lower(), 'departed': config.DEPARTED in text.lower()}
+
+    if result['arrived'] and result['departed']:
+        second_time = re.search("\d{1,2}[:.]{0,1}\d{1,2}", comment)
+        if second_time:
+            second_time = second_time.group(0)
+            result['second_time'] = parse_time(second_time)
+            result['comment'] = result['comment'].replace(second_time, '')
+
     return result

@@ -192,7 +192,11 @@ async def add_analytics(message: Message):
     if parsed_message['arrived'] == parsed_message['departed'] == True:
         need_to_create_analytics = True
         arrived_time = parsed_message['time']
-        departed_time = parsed_message['time'] + datetime.timedelta(minutes=5)
+        second_time = parsed_message.get('second_time', None)
+        if second_time:
+            departed_time = second_time
+        else:
+            departed_time = parsed_message['time'] + datetime.timedelta(minutes=5)
         comment = parsed_message['comment']
         add_worker = parsed_message['add_worker']
 

@@ -68,8 +68,8 @@ def parse_time(arrive_time: str) -> datetime.datetime:
         if len(arrive_time) == 4 and arrive_time.isdigit():
             hours, minutes = arrive_time[:2], arrive_time[2:]
         else:
-            hours, minutes = map(re.split(':. ', arrive_time))
-        return datetime.datetime.now().replace(hour=hours, minute=minutes)
+            hours, minutes = re.split('[:. ]', arrive_time)
+        return datetime.datetime.now().replace(hour=int(hours), minute=int(minutes))
     return datetime.datetime.now()
 
 

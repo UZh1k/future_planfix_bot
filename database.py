@@ -24,14 +24,14 @@ worker = Table('worker', metadata_obj,
                Column('tg_id', String(255))
                )
 
-attendance = Table('attendance', metadata_obj,
+attendance = Table('attendance_test', metadata_obj,
                    Column('id', Integer, primary_key=True),
                    Column('arrived', Boolean),
                    Column('time', DateTime),
                    Column('worker_id', ForeignKey('worker.id')),
                    Column('comment', String(255)),
                    Column('is_marked', Boolean, default=False),
-                   Column('with_worker', Boolean, default=False)
+                   Column('add_worker', Boolean, default=False)
                    )
 
 
@@ -121,7 +121,7 @@ class PostgesOperations:
     def add_attendance(self, user_id: int, time=datetime.datetime.now(), arrived: bool = True, comment: str = '',
                        is_marked: bool = False, add_worker: bool = False):
         ins = attendance.insert().values(arrived=arrived, time=time, worker_id=user_id, comment=comment,
-                                         is_marked=is_marked, with_worker=add_worker)
+                                         is_marked=is_marked, add_worker=add_worker)
         self.connect.execute(ins)
 
     @db_update
@@ -134,7 +134,8 @@ class PostgesOperations:
         :return:
         """
         query = select(attendance).where(
-            attendance.c.worker_id == user_id and attendance.c.arrived == True and attendance.c.is_marked == False) \
+            attendance.c.worker_id == user_id).where(attendance.c.arrived == True).where(
+            attendance.c.is_marked == False) \
             .order_by(desc('time'))
         try:
             return self.connect.execute(query).fetchone()._mapping

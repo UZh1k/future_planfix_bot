@@ -4,6 +4,8 @@ from aiogram import Bot
 from aiogram.dispatcher import Dispatcher
 from aiogram.types import ParseMode, Message
 from aiogram.utils import executor
+from aiogram.utils.exceptions import CantInitiateConversation
+import traceback
 
 import api
 import config
@@ -179,76 +181,99 @@ async def create_worker(message: Message):
                                f'Мы вас не нашли. Перепроверьте данные, добавьте имя или обратитесь к администратору')
 
 
+async def write_all_owners(message_text=''):
+    for owner_id in config.OWNER_IDS:
+        try:
+            for text in services.split_text_by_chunks(message_text):
+                await bot.send_message(owner_id, text)
+        except CantInitiateConversation:
+            continue
+
+
 @dp.message_handler(lambda message: services.is_group_message(message) and (
         "прибыл" in message.text.lower() or "убыл" in message.text.lower()))
 async def add_analytics(message: Message):
-    user = postgres.get_user_by_tg_id(str(message.from_user.id))
-    if not user:
-        return
+    try:
+        user = postgres.get_user_by_tg_id(str(message.from_user.id))
+        if not user:
+            await bot.send_message(message.chat.id, 'Пользователь не опознан. Отправьте '
+                                                    'мне свое имя и фамилию в личные сообщения (это безопасно)')
+            return
 
-    parsed_message = services.parse_attendance_message(message.text)
-    need_to_create_analytics = False
+        try:
+            parsed_message = services.parse_attendance_message(message.text)
+        except Exception as parse_error:
+            await bot.send_message(message.chat.id, 'Возникла ошибка при чтении сообщения. '
+                                                    'Проверьте корректность данных')
+            raise
 
-    if parsed_message['arrived'] == parsed_message['departed'] == True:
-        need_to_create_analytics = True
-        arrived_time = parsed_message['time']
-        second_time = parsed_message.get('second_time', None)
-        if second_time:
-            departed_time = second_time
-        else:
-            departed_time = parsed_message['time'] + datetime.timedelta(minutes=5)
-        comment = parsed_message['comment']
-        add_worker = parsed_message['add_worker']
+        need_to_create_analytics = False
 
-        postgres.add_attendance(user_id=user['id'],
-                                arrived=True,
-                                time=parsed_message['time'],
-                                comment=parsed_message['comment'],
-                                is_marked=True,
-                                add_worker=parsed_message['add_worker'])
-        postgres.add_attendance(user_id=user['id'],
-                                arrived=False,
-                                time=departed_time,
-                                comment=parsed_message['comment'],
-                                is_marked=True,
-                                add_worker=parsed_message['add_worker'])
-
-    elif parsed_message['arrived'] or parsed_message['departed']:
-        last_attendance = postgres.get_user_last_attendance(user_id=user['id'])
-        print(last_attendance)
-
-        if last_attendance:
-            postgres.add_attendance(user_id=user['id'],
-                                    arrived=False,
-                                    time=parsed_message['time'],
-                                    comment=last_attendance['comment'],
-                                    add_worker=last_attendance['add_worker'],
-                                    is_marked=True)
-
+        if parsed_message['arrived'] == parsed_message['departed'] == True:
             need_to_create_analytics = True
-            arrived_time = last_attendance['time']
-            departed_time = parsed_message['time']
-            comment = last_attendance['comment']
-            add_worker = last_attendance['add_worker']
+            arrived_time = parsed_message['time']
+            second_time = parsed_message.get('second_time', None)
+            if second_time:
+                departed_time = second_time
+            else:
+                departed_time = parsed_message['time'] + datetime.timedelta(minutes=5)
+            comment = parsed_message['comment']
+            add_worker = parsed_message['add_worker']
 
-            postgres.mark_user_last_attendance(user_id=user['id'], last_attendance_id=last_attendance['id'])
-
-        if parsed_message['arrived']:
             postgres.add_attendance(user_id=user['id'],
                                     arrived=True,
                                     time=parsed_message['time'],
                                     comment=parsed_message['comment'],
+                                    is_marked=True,
+                                    add_worker=parsed_message['add_worker'])
+            postgres.add_attendance(user_id=user['id'],
+                                    arrived=False,
+                                    time=departed_time,
+                                    comment=parsed_message['comment'],
+                                    is_marked=True,
                                     add_worker=parsed_message['add_worker'])
 
-    if need_to_create_analytics:
-        res = await api.create_analytics(user_login_id=user['login_id'],
-                                         username=user['name'],
-                                         arrived_time=arrived_time,
-                                         departed_time=departed_time,
-                                         comment=comment,
-                                         add_worker=add_worker)
+        elif parsed_message['arrived'] or parsed_message['departed']:
+            last_attendance = postgres.get_user_last_attendance(user_id=user['id'])
 
-        await bot.send_message(message.chat.id, f'Операция прошла {res}')
+            if last_attendance:
+                postgres.add_attendance(user_id=user['id'],
+                                        arrived=False,
+                                        time=parsed_message['time'],
+                                        comment=last_attendance['comment'],
+                                        add_worker=last_attendance['add_worker'],
+                                        is_marked=True)
+
+                need_to_create_analytics = True
+                arrived_time = last_attendance['time']
+                departed_time = parsed_message['time']
+                comment = last_attendance['comment']
+                add_worker = last_attendance['add_worker']
+
+                postgres.mark_user_last_attendance(user_id=user['id'], last_attendance_id=last_attendance['id'])
+
+            if parsed_message['arrived']:
+                postgres.add_attendance(user_id=user['id'],
+                                        arrived=True,
+                                        time=parsed_message['time'],
+                                        comment=parsed_message['comment'],
+                                        add_worker=parsed_message['add_worker'])
+
+        if need_to_create_analytics:
+            res = await api.create_analytics(user_login_id=user['login_id'],
+                                             username=user['name'],
+                                             arrived_time=arrived_time,
+                                             departed_time=departed_time,
+                                             comment=comment,
+                                             add_worker=add_worker)
+
+            if res:
+                await bot.send_message(message.chat.id, 'Данные внесены в Планфикс')
+
+    except Exception as global_error:
+        tb = traceback.format_exc()
+        await write_all_owners(tb)
+        raise
 
     # "Неверный формат сообщения, пожалуйста, введите его в формате:\nприбыл *объект* *время (опционально)*")
 

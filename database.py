@@ -10,7 +10,7 @@ import api
 
 metadata_obj = MetaData()
 
-chat_to_task = Table('chat_to_task_test', metadata_obj,
+chat_to_task = Table('chat_to_task', metadata_obj,
                      Column('chat_id', String(255)),
                      Column('ext_id', String(255)),
                      Column('int_id', String(255)),

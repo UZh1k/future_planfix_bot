@@ -1,7 +1,10 @@
-import os
 from dotenv import load_dotenv
+import os
+import time
+
 
 load_dotenv()
+time.tzset()
 
 OWNER_IDS = os.environ.get("OWNER_IDS").split(',')
 
@@ -36,3 +39,4 @@ DEPARTED = 'убыл'
 
 ADD_WORKER_ID = '88431'
 ADD_WORKER_NAME = 'Разнорабочий'
+UNKNOWN_USER_TEXT = 'Я не могу Вас опознать, просьба представиться.'

@@ -167,12 +167,14 @@ async def send_welcome(message: Message):
                            "Введите Вашу фамилию (и имя при необходимости)")
 
 
-@dp.message_handler(lambda message: services.is_private_message(message))
+@dp.message_handler(lambda message: (services.is_group_message(message)
+                                     and message.reply_to_message is not None
+                                     and message.reply_to_message.text == config.UNKNOWN_USER_TEXT))
 async def create_worker(message: Message):
     print(message)
     user_info = await api.get_user(message.text)
     if user_info:
-        postgres.add_user(user_info["FIO"], user_info["LoginID"], str(message.chat.id))
+        postgres.add_user(user_info["FIO"], user_info["LoginID"], str(message.from_user.id))
         await bot.send_message(message.chat.id, f'Мы вас нашли!\n\n'
                                                 f'ФИО: {user_info["FIO"]}\n'
                                                 f'ID Планфикса: {user_info["LoginID"]}')
@@ -196,8 +198,7 @@ async def add_analytics(message: Message):
     try:
         user = postgres.get_user_by_tg_id(str(message.from_user.id))
         if not user:
-            await bot.send_message(message.chat.id, 'Пользователь не опознан. Отправьте '
-                                                    'мне свое имя и фамилию в личные сообщения (это безопасно)')
+            await bot.send_message(message.chat.id, config.UNKNOWN_USER_TEXT)
             return
 
         try:
@@ -268,7 +269,8 @@ async def add_analytics(message: Message):
                                              add_worker=add_worker)
 
             if res:
-                await bot.send_message(message.chat.id, 'Данные внесены в Планфикс')
+                await bot.send_message(message.chat.id, 'Данные внесены в Планфикс',
+                                       reply_to_message_id=message.message_id)
 
     except Exception as global_error:
         tb = traceback.format_exc()

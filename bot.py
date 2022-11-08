@@ -167,22 +167,6 @@ async def send_welcome(message: Message):
                            "Введите Вашу фамилию (и имя при необходимости)")
 
 
-@dp.message_handler(lambda message: (services.is_group_message(message)
-                                     and message.reply_to_message is not None
-                                     and message.reply_to_message.text == config.UNKNOWN_USER_TEXT))
-async def create_worker(message: Message):
-    print(message)
-    user_info = await api.get_user(message.text)
-    if user_info:
-        postgres.add_user(user_info["FIO"], user_info["LoginID"], str(message.from_user.id))
-        await bot.send_message(message.chat.id, f'Мы вас нашли!\n\n'
-                                                f'ФИО: {user_info["FIO"]}\n'
-                                                f'ID Планфикса: {user_info["LoginID"]}')
-    else:
-        await bot.send_message(message.chat.id,
-                               f'Мы вас не нашли. Перепроверьте данные, добавьте имя или обратитесь к администратору')
-
-
 async def write_all_owners(message_text=''):
     for owner_id in config.OWNER_IDS:
         try:
@@ -277,7 +261,23 @@ async def add_analytics(message: Message):
         await write_all_owners(tb)
         raise
 
-    # "Неверный формат сообщения, пожалуйста, введите его в формате:\nприбыл *объект* *время (опционально)*")
+
+@dp.message_handler(lambda message: (services.is_group_message(message) and
+                                     (message.reply_to_message is not None
+                                     and message.reply_to_message.text == config.UNKNOWN_USER_TEXT
+                                     or message.text.startswith(f'@{config.BOT_NAME}'))))
+async def create_worker(message: Message):
+    print(message)
+    fio = message.text.replace(f'@{config.BOT_NAME}', '').strip()
+    user_info = await api.get_user(fio)
+    if user_info:
+        postgres.add_user(user_info["FIO"], user_info["LoginID"], str(message.from_user.id))
+        await bot.send_message(message.chat.id, f'Мы вас нашли!\n\n'
+                                                f'ФИО: {user_info["FIO"]}\n'
+                                                f'ID Планфикса: {user_info["LoginID"]}')
+    else:
+        await bot.send_message(message.chat.id,
+                               f'Мы вас не нашли. Перепроверьте данные, добавьте имя или обратитесь к администратору')
 
 
 async def on_startup(dispatcher: Dispatcher):

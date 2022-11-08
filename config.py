@@ -9,6 +9,7 @@ time.tzset()
 OWNER_IDS = os.environ.get("OWNER_IDS").split(',')
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
+BOT_NAME = os.environ.get("BOT_NAME")
 PF_TOKEN = os.environ.get("PF_TOKEN")
 
 BOT_TYPE = os.environ.get("BOT_TYPE", "POLLING")

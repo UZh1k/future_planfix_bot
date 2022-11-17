@@ -111,6 +111,8 @@ async def create_analytics(user_login_id: int, username: str, arrived_time=datet
                                                                          login_id=user_login_id,
                                                                          username=username)
         data['ActionDescription'] = data['ActionDescription'].format(quote(comment))
+        data['NotifiedLogins[0][ID]'] = str(config.OWNER_PF_ID)
+        data['NotifiedLogins[0][Name]'] = config.OWNER_PF_NAME
 
         async with session.post(url=f"{config.ENDPOINT}/ajax/", data=data,
                                 cookies=secret.cookies, headers=secret.headers) as resp:

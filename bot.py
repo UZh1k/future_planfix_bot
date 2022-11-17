@@ -249,7 +249,7 @@ async def add_analytics(message: Message):
                                              username=user['name'],
                                              arrived_time=arrived_time,
                                              departed_time=departed_time,
-                                             comment=comment,
+                                             comment=f"{user['name']} {comment}",
                                              add_worker=add_worker)
 
             if res:

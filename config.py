@@ -7,6 +7,8 @@ load_dotenv()
 time.tzset()
 
 OWNER_IDS = os.environ.get("OWNER_IDS").split(',')
+OWNER_PF_ID = os.environ.get("OWNER_PF_ID")
+OWNER_PF_NAME = os.environ.get("OWNER_PF_NAME")
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 BOT_NAME = os.environ.get("BOT_NAME")

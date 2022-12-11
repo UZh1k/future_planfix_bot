@@ -252,10 +252,6 @@ async def add_analytics(message: Message):
                                              comment=f"{user['name']} {comment}",
                                              add_worker=add_worker)
 
-            if res:
-                await bot.send_message(message.chat.id, 'Данные внесены в Планфикс',
-                                       reply_to_message_id=message.message_id)
-
     except Exception as global_error:
         tb = traceback.format_exc()
         await write_all_owners(tb)

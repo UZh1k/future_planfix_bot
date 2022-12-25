@@ -49,7 +49,7 @@ async def show_task(message: Message):
     """
     print(message)
     tag = services.get_tag_from_string(message.text, config.TAGS_RU)
-    task_id = postgres.get_task_id(message.chat.id, config.TRANS_DICT_RU[tag])
+    task_id = postgres.get_task_id(str(message.chat.id), config.TRANS_DICT_RU[tag])
     tasks = await api.get_check_list(task_id)
     tasks_pretty = []
     for task in tasks:
@@ -83,7 +83,7 @@ async def connect_task(message: Message):
         else:
             task_id = splitted_message[-1]
             tag = services.get_tag_from_string(splitted_message[0], config.TAGS)
-            if await postgres.connect_chat_to_task(chat_id=message.chat.id,
+            if await postgres.connect_chat_to_task(chat_id=str(message.chat.id),
                                                    task_id=task_id,
                                                    tag=tag):
                 await bot.send_message(message.chat.id,
@@ -107,7 +107,7 @@ async def add_task(message: Message):
         splitted_by_n = message.text.split('\n')
         first_string_splitted = splitted_by_n[0].split()
         tag = services.get_tag_from_string(first_string_splitted[0], config.TAGS)
-        task_id = postgres.get_task_id(message.chat.id, tag)
+        task_id = postgres.get_task_id(str(message.chat.id), tag)
 
         tasks = [" ".join(first_string_splitted[1:])] if len(first_string_splitted) > 1 else []
         if len(splitted_by_n) > 1:

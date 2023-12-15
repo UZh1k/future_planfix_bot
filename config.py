@@ -27,6 +27,9 @@ DB_PASSWORD = os.environ.get("DB_PASSWORD")
 
 ENDPOINT = os.environ.get("ENDPOINT")
 
+PF_LOGIN = os.environ.get("PF_LOGIN")
+PF_PASSWORD = os.environ.get("PF_PASSWORD")
+
 MONTAGE = "mount"
 MONTAGE_RU = "монтаж"
 SETTING = "tuning"

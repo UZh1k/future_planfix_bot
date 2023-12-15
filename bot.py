@@ -11,6 +11,7 @@ import api
 import config
 import database
 import services
+import secret
 
 bot = Bot(token=config.BOT_TOKEN)
 dp = Dispatcher(bot)
@@ -255,6 +256,10 @@ async def add_analytics(message: Message):
     except Exception as global_error:
         tb = traceback.format_exc()
         await write_all_owners(tb)
+
+        secret.cookies.updateCookies()
+        secret.cookies.updateHeaders()
+        await bot.send_message(message.chat.id, "Произведена перезагрузка бота, проверьте записи в Планфиксе")
         raise
 
 

@@ -16,7 +16,7 @@ import config
 async def get_int_id(task_id) -> Optional[str]:
     async with aiohttp.ClientSession() as session:
         async with session.get(url=f"{config.ENDPOINT}/task/{task_id}", data=secret.data['get_int_id'].format(task_id),
-                               cookies=secret.cookies, headers=secret.headers) as resp:
+                               cookies=secret.cookies.cookies, headers=secret.cookies.headers) as resp:
             try:
                 result = await resp.text()
                 return re.search(r"Current\.task = '\d+';", result).group(0).split('\'')[1]
@@ -27,7 +27,7 @@ async def get_int_id(task_id) -> Optional[str]:
 async def get_check_list(task_id) -> List[str]:
     async with aiohttp.ClientSession() as session:
         async with session.post(url=f"{config.ENDPOINT}/ajax/", data=secret.data['get_check_list'].format(task_id),
-                                cookies=secret.cookies, headers=secret.headers) as resp:
+                                cookies=secret.cookies.cookies, headers=secret.cookies.headers) as resp:
             result = await resp.json()
             tasks = []
             for point in result['CheckList']:
@@ -46,7 +46,7 @@ async def create_task(task_id, task) -> bool:
         data_for_create['TaskParentID'] = str(task_id)
         data_for_create['TaskCheckDescription'] = task
         async with session.post(url=f"{config.ENDPOINT}/ajax/", data=data_for_create,
-                                cookies=secret.cookies, headers=secret.headers) as resp:
+                                cookies=secret.cookies.cookies, headers=secret.cookies.headers) as resp:
             try:
                 result = await resp.json()
                 return result['TaskCheck']['ID']
@@ -57,7 +57,7 @@ async def create_task(task_id, task) -> bool:
 async def get_user(name) -> Dict | bool:
     async with aiohttp.ClientSession() as session:
         async with session.post(url=f"{config.ENDPOINT}/ajax/", data=secret.data['get_all_users'],
-                                cookies=secret.cookies, headers=secret.headers) as resp:
+                                cookies=secret.cookies.cookies, headers=secret.cookies.headers) as resp:
             result = await resp.json()
             users = []
             for usr in result['UserList']:
@@ -74,7 +74,7 @@ async def create_comment(draft_id: int, session: aiohttp.ClientSession) -> bool:
     data_for_create_comment = secret.data['create_comment']
     data_for_create_comment['draftid'] = draft_id
     async with session.post(url=f"{config.ENDPOINT}/ajax/", data=data_for_create_comment,
-                            cookies=secret.cookies, headers=secret.headers) as resp:
+                            cookies=secret.cookies.cookies, headers=secret.cookies.headers) as resp:
         try:
             result = await resp.json()
             return result['Result'] == 'success'
@@ -86,7 +86,7 @@ async def delete_draft(draft_id: int, session: aiohttp.ClientSession) -> bool:
     data_for_delete_draft = secret.data['delete_draft']
     data_for_delete_draft['draftid'] = draft_id
     async with session.post(url=f"{config.ENDPOINT}/ajax/", data=data_for_delete_draft,
-                            cookies=secret.cookies, headers=secret.headers) as resp:
+                            cookies=secret.cookies.cookies, headers=secret.cookies.headers) as resp:
         try:
             result = await resp.json()
             return result['Result'] == 'success'
@@ -115,7 +115,7 @@ async def create_analytics(user_login_id: int, username: str, arrived_time=datet
         data['NotifiedLogins[0][Name]'] = config.OWNER_PF_NAME
 
         async with session.post(url=f"{config.ENDPOINT}/ajax/", data=data,
-                                cookies=secret.cookies, headers=secret.headers) as resp:
+                                cookies=secret.cookies.cookies, headers=secret.cookies.headers) as resp:
 
             result = await resp.json()
             if result['Result'] == 'fail':
